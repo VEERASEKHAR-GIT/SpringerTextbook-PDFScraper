@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+import requests
+import os
+import pandas as pd
+import time
+
+# Set the working directory
+os.chdir('d:/python')
+
+# Define a function to scrape content from a given URL
+def scrape_content(url):
+    session = requests.Session()
+    page = session.get(url, verify=False)
+    return page.content
+
+# Define the main function
+def main():
+    # Get the textbook list from a Springer URL
+    textbook_list_url = 'https://resource-cms.springernature.com/springer-cms/rest/v1/content/17858272/data/v4'
+    textbook_list_content = scrape_content(textbook_list_url)
+    
+    # Save the textbook list to an Excel file
+    with open('textbook.xlsx', 'wb') as f:
+        f.write(textbook_list_content)
+    
+    # Parse the Excel file to extract book information
+    textbook_df = pd.ExcelFile('textbook.xlsx').parse('eBook list')
+    
+    # Iterate through each book and download its PDF
+    for index, row in textbook_df.iterrows():
+        book_title = row['Book Title']
+        doi_url = row['DOI URL']
+        print(f'Downloading: {book_title}')
+        
+        # Generate the PDF download URL
+        doi = doi_url.split('http://doi.org/')[-1].replace('/', '%2F')
+        pdf_url = f'https://rd.springer.com/content/pdf/{doi}.pdf'
+        
+        # Add a delay to be polite to the server
+        time.sleep(5)
+        
+        # Download the PDF content
+        pdf_content = scrape_content(pdf_url)
+        
+        # Save the PDF with a meaningful name
+        pdf_filename = f'{book_title}.pdf'
+        with open(pdf_filename, 'wb') as f:
+            f.write(pdf_content)
+
+# Check if the script is being run as the main program
+if __name__ == "__main__":
+    main()
